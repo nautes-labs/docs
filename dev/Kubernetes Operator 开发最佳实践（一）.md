@@ -24,14 +24,14 @@ Kubernetes 中的资源是对目标环境预期状态的声明，而 Controller 
 
 ```go
 type ClusterSpec struct {
-	// +kubebuilder:validation:Pattern=`https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)`
-	ApiServer string `json:"apiserver" yaml:"apiserver"`
-	// +kubebuilder:validation:Enum=physical;virtual
-	ClusterType ClusterType `json:"clustertype" yaml:"clustertype"`
-	// +kubebuilder:validation:Enum=host;worker
-	Usage ClusterUsage `json:"usage" yaml:"usage"`
-	// +optional
-	HostCluster string `json:"hostcluster" yaml:"hostcluster"`
+    // +kubebuilder:validation:Pattern=`https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_\+.~#?&\/\/=]*)`
+    ApiServer string `json:"apiserver" yaml:"apiserver"`
+    // +kubebuilder:validation:Enum=physical;virtual
+    ClusterType ClusterType `json:"clustertype" yaml:"clustertype"`
+    // +kubebuilder:validation:Enum=host;worker
+    Usage ClusterUsage `json:"usage" yaml:"usage"`
+    // +optional
+    HostCluster string `json:"hostcluster" yaml:"hostcluster"`
 }
 ```
 
@@ -98,17 +98,17 @@ type ClusterSpec struct {
 ```go
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
 func (r *Cluster) ValidateCreate() error {
-	return ValidateCluster(r, nil, false)
+    return ValidateCluster(r, nil, false)
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *Cluster) ValidateUpdate(old runtime.Object) error {
-	return ValidateCluster(r, old.(*Cluster), false)
+    return ValidateCluster(r, old.(*Cluster), false)
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
 func (r *Cluster) ValidateDelete() error {
-	return ValidateCluster(r, nil, true)
+    return ValidateCluster(r, nil, true)
 }
 
 func ValidateCluster(new, old *Cluster, isDelete bool) error {
@@ -119,26 +119,26 @@ func ValidateCluster(new, old *Cluster, isDelete bool) error {
 **Reconcile 函数中的校验：**
 
 ```go
-	// 从缓存中获取最后一次调谐成功的声明信息
+    // 从缓存中获取最后一次调谐成功的声明信息
     lastCluster, err := getLastApply(cluster)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+    if err != nil {
+        return ctrl.Result{}, err
+    }
 
     // 调用 webhook 中定义的校验函数
-	if err := clusterCRD.ValidateCluster(cluster, lastCluster, false); err != nil {
-		condition := metav1.Condition{
-			Type:    ClusterConditionSecret,
-			Status:  "False",
-			Reason:  ClusterConditionReason,
-			Message: err.Error(),
-		}
-		cluster.Status.SetConditions([]metav1.Condition{condition}, map[string]bool{ClusterConditionSecret: true})
-		if err := r.Status().Update(ctx, cluster); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, err
-	}
+    if err := clusterCRD.ValidateCluster(cluster, lastCluster, false); err != nil {
+        condition := metav1.Condition{
+            Type:    ClusterConditionSecret,
+            Status:  "False",
+            Reason:  ClusterConditionReason,
+            Message: err.Error(),
+        }
+        cluster.Status.SetConditions([]metav1.Condition{condition}, map[string]bool{ClusterConditionSecret: true})
+        if err := r.Status().Update(ctx, cluster); err != nil {
+            return ctrl.Result{}, err
+        }
+        return ctrl.Result{}, err
+    }
 ```
 
 
@@ -192,14 +192,14 @@ status:
 
 ```go
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
+    logger := log.FromContext(ctx)
 
-	cluster := &clusterCRD.Cluster{}
-	if err := r.Get(ctx, req.NamespacedName, cluster); err != nil {
-		return ctrl.Result{}, client.IgnoreNotFound(err)
-	}
+    cluster := &clusterCRD.Cluster{}
+    if err := r.Get(ctx, req.NamespacedName, cluster); err != nil {
+        return ctrl.Result{}, client.IgnoreNotFound(err)
+    }
 
-	if !cluster.DeletionTimestamp.IsZero() {
+    if !cluster.DeletionTimestamp.IsZero() {
         // 删除逻辑
     }
 }
@@ -214,33 +214,33 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 当 Controller 收到删除事件时，先判断在 metadata.finalizers 中是否有当前 Controller 所管理的终结器，如果有则执行外部服务的清理，之后移除相关终结器。如果资源中存在多个终结器，相关的 Controller 需要进行各自的清理外部服务和移除终结器的操作。
 
 ```go
-	// 删除事件
-	if !cluster.DeletionTimestamp.IsZero() {
+    // 删除事件
+    if !cluster.DeletionTimestamp.IsZero() {
         // 如果资源中没有当前 Controller 管理的终结器，则直接返回
-		if !controllerutil.ContainsFinalizer(cluster, FinalizerName) {
-			return ctrl.Result{}, nil
-		}
+        if !controllerutil.ContainsFinalizer(cluster, FinalizerName) {
+            return ctrl.Result{}, nil
+        }
 
         // 清理外部服务
-		if err := r.deleteCluster(ctx, *cluster); err != nil {
-			return ctrl.Result{}, err
-		}
+        if err := r.deleteCluster(ctx, *cluster); err != nil {
+            return ctrl.Result{}, err
+        }
 
-		newCluster := &clusterCRD.Cluster{}
-		if err := r.Get(ctx, req.NamespacedName, newCluster); err != nil {
-			return ctrl.Result{}, err
-		}
+        newCluster := &clusterCRD.Cluster{}
+        if err := r.Get(ctx, req.NamespacedName, newCluster); err != nil {
+            return ctrl.Result{}, err
+        }
         
         // 移除终结器并返回
-		controllerutil.RemoveFinalizer(newCluster, FinalizerName)
-		if err := r.Update(ctx, newCluster); err != nil {
-			return ctrl.Result{}, err
-		}
-		return ctrl.Result{}, nil
-	}
+        controllerutil.RemoveFinalizer(newCluster, FinalizerName)
+        if err := r.Update(ctx, newCluster); err != nil {
+            return ctrl.Result{}, err
+        }
+        return ctrl.Result{}, nil
+    }
 
     // 添加终结器
-	controllerutil.AddFinalizer(cluster, FinalizerName)
+    controllerutil.AddFinalizer(cluster, FinalizerName)
 ```
 
 
@@ -255,19 +255,19 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 // CodeRepoStatus defines the observed state of CodeRepo
 type CodeRepoStatus struct {
     // 最新调谐结果
-	// +optional
-	Conditions []metav1.Condition `json:"conditions" yaml:"conditions"`
-	// +optional
-	ArgoStatus *SyncCodeRepo2ArgoStatus `json:"argoOperator" yaml:"argoOperator"`
+    // +optional
+    Conditions []metav1.Condition `json:"conditions" yaml:"conditions"`
+    // +optional
+    ArgoStatus *SyncCodeRepo2ArgoStatus `json:"argoOperator" yaml:"argoOperator"`
 }
 
 type SyncCodeRepo2ArgoStatus struct {
     // 上一次成功调谐的声明信息的缓存
-	LastSuccessSpec string      `json:"lastSuccessSpec" yaml:"lastSuccessSpec"`
-	LastSuccessTime metav1.Time `json:"lastSuccessTime" yaml:"lastSuccessTime"`
+    LastSuccessSpec string      `json:"lastSuccessSpec" yaml:"lastSuccessSpec"`
+    LastSuccessTime metav1.Time `json:"lastSuccessTime" yaml:"lastSuccessTime"`
     // 目标环境的当前属性
-	Url             string      `json:"url" yaml:"url"`
-	SecretID        string      `json:"secretID" yaml:"secretID"`
+    Url             string      `json:"url" yaml:"url"`
+    SecretID        string      `json:"secretID" yaml:"secretID"`
 }
 ```
 
